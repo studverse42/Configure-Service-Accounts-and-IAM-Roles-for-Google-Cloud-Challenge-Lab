@@ -1,0 +1,85 @@
+gcloud iam service-accounts create bigquery-qwiklab \
+  --project="$PROJECT_ID" \
+  --display-name="bigquery-qwiklab"
+
+-----------------------------------------------------------------------------------------------
+
+export BQ_SA="bigquery-qwiklab@${PROJECT_ID}.iam.gserviceaccount.com"
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${BQ_SA}" \
+  --role="roles/bigquery.dataViewer" \
+  --condition=None --quiet
+
+gcloud projects add-iam-policy-binding "$PROJECT_ID" \
+  --member="serviceAccount:${BQ_SA}" \
+  --role="roles/bigquery.user" \
+  --condition=None --quiet
+
+------------------------------------------------------------------------------------------------------------------------------
+
+gcloud compute instances create bigquery-instance \
+  --zone="$ZONE" \
+  --machine-type=e2-medium \
+  --service-account="$BQ_SA" \
+  --scopes=https://www.googleapis.com/auth/cloud-platform
+------------------------------------------------------------------------------------------------------------------
+gcloud compute instances describe bigquery-instance \
+  --zone="$ZONE" \
+  --format="yaml(name,status,serviceAccounts)"
+------------------------------------------------------------------------------------------------------------------------
+
+gcloud compute ssh bigquery-instance --zone="$ZONE"
+
+----------------------------------------------------------------------------------------------------------------------
+
+
+sudo apt-get update
+sudo apt-get install -y python3-pip python3-venv
+
+python3 -m venv ~/bq-env
+source ~/bq-env/bin/activate
+pip install google-cloud-bigquery db-dtypes pandas
+
+------------------------------------------------------------------------------------------------------
+
+cat > query.py <<'EOF'
+from google.auth import compute_engine
+from google.cloud import bigquery
+
+credentials = compute_engine.Credentials(
+    service_account_email="bigquery-qwiklab@qwiklabs-gcp-03-49789e885c69.iam.gserviceaccount.com"
+)
+
+query = """
+SELECT name, SUM(number) AS total_people
+FROM `bigquery-public-data.usa_names.usa_1910_2013`
+WHERE state = 'TX'
+GROUP BY name, state
+ORDER BY total_people DESC
+LIMIT 20
+"""
+
+client = bigquery.Client(
+    project="qwiklabs-gcp-03-49789e885c69",
+    credentials=credentials
+)
+
+print(client.query(query).to_dataframe())
+EOF
+
+python3 query.py
+
+
+
+
+
+-------------------------------------------------------------------------------------
+
+
+check progress
+
+
+
+
+
