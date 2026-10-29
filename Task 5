@@ -1,0 +1,12 @@
+cat > role-definition.yaml <<'EOF'
+title: "Cloud SQL Connector"
+description: "Custom role for Cloud SQL instance access"
+stage: "GA"
+includedPermissions:
+- cloudsql.instances.connect
+- cloudsql.instances.get
+EOF
+
+gcloud iam roles create cloudSqlConnector \
+  --project="$PROJECT_ID" \
+  --file=role-definition.yaml
